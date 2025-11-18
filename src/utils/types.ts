@@ -29,6 +29,8 @@ interface Labeled {
   type: string
   label: string
   index: number
+  color?: string
+  textColor?: string
 }
 
 interface Label extends Labeled {

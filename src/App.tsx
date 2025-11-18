@@ -4,7 +4,7 @@ import { createStore } from 'solid-js/store'
 import dom2img from 'dom-to-image'
 import { Footer } from './components/Footer'
 import { GridShow } from './components/GridShow'
-import { SearchDialog } from './components/SearchDialog'
+import { SearchPanel } from './components/SearchPanel/panel'
 import type { MayBeSong } from './utils/types'
 import './index.css'
 import { Download } from './components/Download'
@@ -33,6 +33,26 @@ const GRID_COLORS: string[] = [
   'bg-purple-200',
   'bg-green-200',
 ]
+
+// Mapping of CSS class names to hex colors for color picker
+const COLOR_CLASS_TO_HEX: Record<string, string> = {
+  'bg-blue-200': '#bfdbfe',
+  'bg-yellow-200': '#fef08a',
+  'bg-red-200': '#fecaca',
+  'bg-neutral-700': '#404040',
+  'bg-gray-70': '#f3f4f6',
+  'bg-orange-200': '#fed7aa',
+  'bg-pink-200': '#fbcfe8',
+  'bg-purple-200': '#e9d5ff',
+  'bg-green-200': '#bbf7d0',
+}
+
+// Convert color (hex or class name) to hex for color picker
+function toHexColor(color?: string): string | undefined {
+  if (!color) return undefined
+  if (color.startsWith('#')) return color
+  return COLOR_CLASS_TO_HEX[color]
+}
 
 function setStorage(obj: MayBeSong[]) {
   if (typeof window === 'undefined')
@@ -67,7 +87,7 @@ const ErrorFallback: Component<{
 }
 
 const App: Component = () => {
-  const [dlg, setDlg] = createSignal(false)
+  const [showPanel, setShowPanel] = createSignal(false)
   let cached = getStorage()
   if (cached.length === 0 || !sameArray(TYPES, cached.map(i => i.label)))
     cached = TYPES.map((i, j) => ({ label: i, type: 'label', index: j }))
@@ -116,60 +136,84 @@ const App: Component = () => {
   }
   return (
     <ErrorBoundary fallback={(err, reset) => <ErrorFallback err={err} reset={reset} />}>
-      <div class="scale-wrapper">
-        <div
-          ref={el => containerRef = el}
-          class="scale-container"
-          style={{ transform: `scale(${scale()})` }}
-        >
-          <div class="w-850px" classList={{ 'mx-a': ma() }}>
-            <div ref={setDom} class="bg-white/100 p-8 pb-4" style="aspect-ratio:1/1;" >
-          <input class="text-center font-700 text-2rem w-full border-none p-4" value="封面颜色推歌" />
-          <GridShow
-            data={songs}
-            colors={GRID_COLORS}
-            onSelect={(id) => {
-              setCur(id)
-              setDlg(true)
+      <div class="flex h-screen">
+        <Show when={showPanel()}>
+          <SearchPanel
+            // eslint-disable-next-line solid/reactivity
+            initialBackgroundColor={toHexColor(songs[cur()].color)}
+            initialTextColor={toHexColor(songs[cur()].textColor)}
+            initialLabel={songs[cur()].label}
+            onSelect={(song) => {
+              setSongs(cur(), { ...song, label: songs[cur()].label, index: cur(), type: 'song', color: songs[cur()].color, textColor: songs[cur()].textColor })
+              setShowPanel(false)
+              setStorage(songs)
+            }}
+            onClose={() => {
+              setShowPanel(false)
+            }}
+            // eslint-disable-next-line solid/reactivity
+            onFill={(name) => {
+              setSongs(cur(), { name, label: songs[cur()].label, index: cur(), type: 'onlyname', color: songs[cur()].color, textColor: songs[cur()].textColor })
+              setShowPanel(false)
+              setStorage(songs)
+            }}
+            // eslint-disable-next-line solid/reactivity
+            onClear={() => {
+              setSongs(cur(), { label: songs[cur()].label, index: cur(), type: 'label', color: songs[cur()].color, textColor: songs[cur()].textColor })
+              setShowPanel(false)
+              setStorage(songs)
+            }}
+            onBackgroundColorChange={(color) => {
+              setSongs(cur(), 'color', color)
+              setStorage(songs)
+            }}
+            onTextColorChange={(color) => {
+              setSongs(cur(), 'textColor', color)
+              setStorage(songs)
+            }}
+            onLabelChange={(label) => {
+              setSongs(cur(), 'label', label)
+              setStorage(songs)
             }}
           />
-          <Footer />
-        </div>
-        <button class="page mt-2 w-full" disabled={!ma()} onClick={generateCanvas}>
-          {ma() ? '点击生成' : <>生成中 请稍等 网页突然靠左是<span class="line-through">特性</span></>}
-        </button>
-        <div class="text-center p-4">
-          <a class="link" href="https://github.com/zengyichen/music-grid">GitHub</a>
-        </div>
-      </div>
-      <Show when={showDownload()}>
-        <Download data={img()} onClose={() => setDownload(false)} />
-      </Show>
-      <Show when={dlg()}>
-        <SearchDialog
-          // eslint-disable-next-line solid/reactivity
-          onSelect={(song) => {
-            setSongs(cur(), { ...song, label: songs[cur()].label, index: cur(), type: 'song' })
-            setDlg(false)
-            setStorage(songs)
-          }}
-          onClose={() => {
-            setDlg(false)
-          }}
-          // eslint-disable-next-line solid/reactivity
-          onFill={(name) => {
-            setSongs(cur(), { name, label: songs[cur()].label, index: cur(), type: 'onlyname' })
-            setDlg(false)
-            setStorage(songs)
-          }}
-          // eslint-disable-next-line solid/reactivity
-          onClear={() => {
-            setSongs(cur(), { label: songs[cur()].label, index: cur(), type: 'label' })
-            setDlg(false)
-            setStorage(songs)
-          }}
-        />
-      </Show>
+        </Show>
+        <div class="flex-1 scale-wrapper">
+          <div
+            ref={el => containerRef = el}
+            class="scale-container"
+            style={{ transform: `scale(${scale()})` }}
+          >
+            <div class="w-790px" classList={{ 'mx-a': ma() }}>
+              <div ref={setDom} class="bg-white/100 p-8 pb-4" style="aspect-ratio:1/1;" >
+                <input class="text-center font-700 text-2rem w-full border-none p-4" value="封面颜色推歌" />
+                <GridShow
+                  data={songs}
+                  colors={GRID_COLORS}
+                  onSelect={(id) => {
+                    setCur(id)
+                    setShowPanel(true)
+                  }}
+                />
+                <Footer />
+              </div>
+              <button class="page mt-2 w-full" onClick={() => {
+                const resetSongs = TYPES.map((i, j) => ({ label: i, type: 'label' as const, index: j }))
+                setSongs(resetSongs)
+                setStorage(resetSongs)
+              }}>
+                一键清除
+              </button>
+              <button class="page mt-2 w-full" disabled={!ma()} onClick={generateCanvas}>
+                {ma() ? '点击生成' : <>生成中 请稍等 网页突然靠左是<span class="line-through">特性</span></>}
+              </button>
+              <div class="text-center p-4">
+                <a class="link" href="https://github.com/zengyichen/music-grid">GitHub</a>
+              </div>
+            </div>
+            <Show when={showDownload()}>
+              <Download data={img()} onClose={() => setDownload(false)} />
+            </Show>
+          </div>
         </div>
       </div>
     </ErrorBoundary>

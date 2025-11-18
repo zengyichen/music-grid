@@ -8,8 +8,19 @@ const SongShown: Component<{
   onClick: (id: number) => any
   color?: string
 }> = (props) => {
+  // Use custom color from song if set, otherwise use default color
+  const appliedBgColor = () => props.song.color ?? props.color ?? ''
+  const appliedTextColor = () => props.song.textColor ?? ''
+  
+  // Check if color is hex code (custom) or class name (default)
+  const isBgHexColor = () => appliedBgColor().startsWith('#')
+  const isTextHexColor = () => appliedTextColor().startsWith('#')
+  
   const titleClass = (() => {
-    const c = props.color ?? ''
+    // If custom text color is set, don't use class
+    if (isTextHexColor()) return ''
+    
+    const c = appliedBgColor()
     // If this is the "黑色" tile, force white title per requirement
     if (props.song.label === '黑色' || c.includes('slate') || c.includes('black'))
       return 'text-white'
@@ -21,13 +32,24 @@ const SongShown: Component<{
     if (c.includes('pink')) return 'text-pink-800'
     if (c.includes('purple')) return 'text-purple-800'
     if (c.includes('green')) return 'text-green-800'
-    // fallback
+    // fallback - for hex colors, use black text
     return 'text-gray-800'
   })()
 
+  const titleStyle = () => {
+    if (isTextHexColor()) {
+      return { color: appliedTextColor() }
+    }
+    return {}
+  }
+
   return (
-    <div class={`cursor-pointer shadow p-2 ${props.color ?? ''}`} onClick={() => props.onClick(props.song.index)}>
-      <strong class={`${titleClass} text-xl mb-2`}>{props.song.label}</strong>
+    <div 
+      class={`cursor-pointer shadow p-2 ${isBgHexColor() ? '' : appliedBgColor()}`} 
+      style={isBgHexColor() ? { 'background-color': appliedBgColor() } : {}}
+      onClick={() => props.onClick(props.song.index)}
+    >
+      <strong class={`${titleClass} text-xl mb-2`} style={titleStyle()}>{props.song.label}</strong>
       <Switch>
         <Match when={props.song.type === 'label'}>
           <div class="w-200px h-200px" />
