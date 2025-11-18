@@ -4,15 +4,23 @@
   background-color: whitesmoke;
   cursor: pointer;
   border: 2px solid black;
-  aspect-ratio:1/1;
 }
 
-.page:hover {
-  background-color: white;
+html,
+body {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 html {
   background-color: lightgrey;
+}
+
+.page:hover {
+  background-color: white;
 }
 
 @font-face {
@@ -34,8 +42,10 @@ input {
 }
 
 #root {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .link {
@@ -45,4 +55,18 @@ input {
 
 .link:hover {
   color: gray;
+}
+
+.scale-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.scale-container {
+  transform-origin: center center;
+  display: inline-block;
 }

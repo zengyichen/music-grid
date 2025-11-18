@@ -1,5 +1,5 @@
 import type { Component } from 'solid-js'
-import { ErrorBoundary, Show, createSignal } from 'solid-js'
+import { ErrorBoundary, Show, createSignal, onMount, onCleanup } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import dom2img from 'dom-to-image'
 import { Footer } from './components/Footer'
@@ -77,6 +77,29 @@ const App: Component = () => {
   const [img, setImg] = createSignal('')
   const [showDownload, setDownload] = createSignal(false)
   const [ma, setMa] = createSignal(true)
+  const [scale, setScale] = createSignal(1)
+  let containerRef: HTMLDivElement | undefined
+
+  const updateScale = () => {
+    if (!containerRef) return
+    const containerWidth = containerRef.offsetWidth
+    const containerHeight = containerRef.offsetHeight
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const scaleX = viewportWidth / containerWidth
+    const scaleY = viewportHeight / containerHeight
+    const newScale = Math.min(scaleX, scaleY, 1)
+    setScale(newScale)
+  }
+
+  onMount(() => {
+    updateScale()
+    window.addEventListener('resize', updateScale)
+  })
+
+  onCleanup(() => {
+    window.removeEventListener('resize', updateScale)
+  })
 
   function generateCanvas() {
     setMa(false)
@@ -93,8 +116,14 @@ const App: Component = () => {
   }
   return (
     <ErrorBoundary fallback={(err, reset) => <ErrorFallback err={err} reset={reset} />}>
-      <div class="w-850px" classList={{ 'mx-a': ma() }}>
-        <div ref={setDom} class="bg-white/100 p-8 pb-4" style="aspect-ratio:1/1;" >
+      <div class="scale-wrapper">
+        <div
+          ref={el => containerRef = el}
+          class="scale-container"
+          style={{ transform: `scale(${scale()})` }}
+        >
+          <div class="w-850px" classList={{ 'mx-a': ma() }}>
+            <div ref={setDom} class="bg-white/100 p-8 pb-4" style="aspect-ratio:1/1;" >
           <input class="text-center font-700 text-2rem w-full border-none p-4" value="封面颜色推歌" />
           <GridShow
             data={songs}
@@ -141,6 +170,8 @@ const App: Component = () => {
           }}
         />
       </Show>
+        </div>
+      </div>
     </ErrorBoundary>
   )
 }
