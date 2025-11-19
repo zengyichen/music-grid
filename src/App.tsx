@@ -54,6 +54,49 @@ function toHexColor(color?: string): string | undefined {
   return COLOR_CLASS_TO_HEX[color]
 }
 
+// Get default background hex for a tile index using the grid palette
+function defaultBgHexForIndex(index: number): string | undefined {
+  const className = GRID_COLORS[index % GRID_COLORS.length]
+  return toHexColor(className)
+}
+
+// Choose readable text color (black/white) based on background hex
+function readableTextHex(bgHex?: string): string {
+  if (!bgHex) return '#000000'
+  const hex = bgHex.replace('#', '')
+  if (hex.length !== 6) return '#000000'
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 140 ? '#000000' : '#ffffff'
+}
+
+// Map background color token to the text color hex used in SongShown's class logic
+const TEXT_HEX_BY_TOKEN: Record<string, string> = {
+  blue: '#1e40af',
+  yellow: '#854d0e',
+  red: '#991b1b',
+  gray: '#1f2937',
+  orange: '#9a3412',
+  pink: '#9d174d',
+  purple: '#6b21a8',
+  green: '#166534',
+  slate: '#ffffff',
+  black: '#ffffff',
+}
+
+function initialTextHexForIndex(index: number, label: string, songTextColor?: string, songBg?: string): string {
+  const customText = toHexColor(songTextColor)
+  if (customText) return customText
+  if (label === '黑色') return '#ffffff'
+  // If a custom hex background is set but no text provided, fallback to the same class default used in component (gray-800)
+  if (songBg && songBg.startsWith('#')) return '#1f2937'
+  const bgClass = songBg && !songBg.startsWith('#') ? songBg : GRID_COLORS[index % GRID_COLORS.length]
+  const token = Object.keys(TEXT_HEX_BY_TOKEN).find(k => bgClass.includes(k))
+  return token ? TEXT_HEX_BY_TOKEN[token] : '#1f2937'
+}
+
 function setStorage(obj: MayBeSong[]) {
   if (typeof window === 'undefined')
     return
@@ -97,8 +140,7 @@ const App: Component = () => {
   const [img, setImg] = createSignal('')
   const [showDownload, setDownload] = createSignal(false)
   const [ma, setMa] = createSignal(true)
-  // 默认缩放 67%
-  const [scale, setScale] = createSignal(0.67)
+  const [scale, setScale] = createSignal(1)
   let containerRef: HTMLDivElement | undefined
 
   const updateScale = () => {
@@ -115,7 +157,7 @@ const App: Component = () => {
   }
 
   onMount(() => {
-    // 初始使用默认缩放值，不立即强制自适应；仅在窗口变化时再尝试调整。
+    updateScale()
     window.addEventListener('resize', updateScale)
   })
 
@@ -157,8 +199,8 @@ const App: Component = () => {
         <Show when={showPanel()}>
           <SearchPanel
             // eslint-disable-next-line solid/reactivity
-            initialBackgroundColor={toHexColor(songs[cur()].color)}
-            initialTextColor={toHexColor(songs[cur()].textColor)}
+            initialBackgroundColor={toHexColor(songs[cur()].color) ?? defaultBgHexForIndex(cur())}
+            initialTextColor={initialTextHexForIndex(cur(), songs[cur()].label, songs[cur()].textColor, songs[cur()].color)}
             initialLabel={songs[cur()].label}
             onSelect={(song) => {
               setSongs(cur(), { ...song, label: songs[cur()].label, index: cur(), type: 'song', color: songs[cur()].color, textColor: songs[cur()].textColor })
